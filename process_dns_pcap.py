@@ -48,7 +48,7 @@ import logging
 import sys
 from rich import print
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __copyright__ = "Chris Marrison"
 __author__ = 'Chris Marrison'
 __author_email__ = 'chris@infoblox.com'
@@ -88,9 +88,20 @@ def parse_args():
         const=logging.DEBUG,
     )
 
-    parser.add_argument('-i', '--infile', type=str, default='sample_queries',
+    parser.add_argument('-p', '--pcap', type=str, default='sample_queries',
                         help="PCAP input file")
 
+    parser.add_argument('-i', '--ignore_list', type=str, default='ignore_list',
+                        help="Ignore domains input file")
+
+    # parser.add_argument('-o', '--output', type=str, default='report.txt',
+    #                     help="Output file")
+
+    parser.add_argument('-f', '--filtered', action='store_true',
+                        help="Ouput filtered domains only")
+
+    parser.add_argument('-S', '--silent', action='store_true',
+                        help="Silent")
 
     return parser.parse_args()
 
@@ -120,9 +131,14 @@ def main():
     # Set up logging
     # log = setup_logging(args.debug)
     
-    pcap = pcap_dns_report.PCAP_DNS(pcap_file=args.infile)
+    pcap = pcap_dns_report.PCAP_DNS(pcap_file=args.pcap,
+                                    ignore_file=args.ignore_list)
     report = pcap.process_pcap()
-    print(report)
+
+    if args.filtered:
+        print(report['filtered_fqdns'])
+    else:
+        print(report)
 
     logging.debug("Processing complete.")
 

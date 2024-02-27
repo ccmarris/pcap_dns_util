@@ -53,6 +53,7 @@ import bloxone
 # Change scapy logging level to remove interface WARNINGS from scapy
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import PcapReader, Scapy_Exception
+from scapy.layers.inet import IP
 from scapy.layers.dns import DNS,DNSQR,DNSRR
 
 
@@ -63,7 +64,7 @@ from cryptography.utils import CryptographyDeprecationWarning
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 '''
 
-__version__ = '0.0.8'
+__version__ = '0.0.9'
 __copyright__ = "Chris Marrison"
 __author__ = 'Chris Marrison'
 __author_email__ = 'chris@infoblox.com'
@@ -81,7 +82,7 @@ class PCAP_DNS:
         ignore_list: Contains list of 'domains' to ignore
     '''
     def __init__(self, pcap_file: str ='traffic.cap',
-                         ignore_file: str ='ignore_list',
+                       ignore_file: str ='ignore_list',
                        qtypes_file: str ='dns_qtypes.yaml'):
         '''
         '''
@@ -136,7 +137,7 @@ class PCAP_DNS:
         if os.path.isfile(ignore_list):
             # Read yaml configuration file
             try:
-                f = open(ignore_list)
+                f = open(ignore_list, 'r')
                 for domain in f:
                     d = domain.strip()
                     # Check for trailing . and append if needed
@@ -216,9 +217,12 @@ class PCAP_DNS:
         '''
         pcount: int = 0
         qcount: int = 0
+        rcount: int = 0
         qname:str = ''
         all_fqdns = collections.Counter()
         query_types = collections.Counter()
+        src_ips = collections.Counter()
+        dst_ips = collections.Counter()
         filtered_fqdns: set = set()
         report: dict = {}
         
@@ -234,18 +238,27 @@ class PCAP_DNS:
                     pbar.update(len(pkt))
                 # Check for DNS Query
                 if pkt.haslayer(DNSQR):
-                    qcount += 1
-                    # process_dns_pkt(pkt)
-                    qname = str(pkt[DNSQR].qname.decode())
-                    all_fqdns[qname] += 1
-                    query_types[self.get_qtype(pkt[DNSQR].qtype)] += 1
-                    if not self.internal_domain(fqdn=qname):
-                        filtered_fqdns.add(qname)
+                    if pkt[DNS].qr == 0:
+                        qcount += 1
+                        # process_dns_pkt(pkt)
+                        qname = str(pkt[DNSQR].qname.decode())
+                        all_fqdns[qname] += 1
+                        query_types[self.get_qtype(pkt[DNSQR].qtype)] += 1
+                        src_ips[pkt[IP].src] += 1
+                        dst_ips[pkt[IP].dst] += 1
+                        if not self.internal_domain(fqdn=qname):
+                            filtered_fqdns.add(qname)
+                    if pkt[DNS].qr == 1:
+                        rcount +=1
+
             pbar.close()
-            report.update({'total packets': pcount,
-                           'total queries': qcount,
-                           'unique_fqdns': dict(all_fqdns),
-                           'record_types': dict(query_types),
+            report.update({ 'statistics': { 'total packets': pcount,
+                                            'total queries': qcount,
+                                            'total responses': rcount,
+                                            'unique_fqdns': dict(all_fqdns),
+                                            'record_types': dict(query_types),
+                                             'src_ips': dict(src_ips),
+                                             'dst_ips': dict(dst_ips) },
                            'filtered_fqdns': filtered_fqdns })
         except:
             raise
@@ -253,3 +266,6 @@ class PCAP_DNS:
         return report
 
     
+    def print_stats(self, report):
+        '''
+        '''
