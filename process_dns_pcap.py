@@ -4,18 +4,18 @@
 
  Description:
 
-    Test pcap reader for DNS query data
+    CLI interface for pcap_dns_report
 
  Requirements:
    Python3 with scapy
 
  Author: Chris Marrison
 
- Date Last Updated: 20230214
+ Date Last Updated: 20240226
 
  Todo:
 
- Copyright (c) 2023 Chris Marrison / Infoblox
+ Copyright (c) 2024 Chris Marrison / Infoblox
 
  Redistribution and use in source and binary forms,
  with or without modification, are permitted provided
@@ -42,30 +42,18 @@
  POSSIBILITY OF SUCH DAMAGE.
 
 '''
+import pcap_dns_report
 import argparse
 import logging
 import sys
-import tqdm
+from rich import print
 
-# Fix Crypto Warnings from scapy
-import warnings
-from cryptography.utils import CryptographyDeprecationWarning
-warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
-
-# Change scapy logging level to remove interface WARNINGS from scapy
-logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
-from scapy.all import PcapReader, Scapy_Exception
-from scapy.layers.dns import DNS, DNSQR
-
-__version__ = '0.0.2'
+__version__ = '0.0.1'
 __copyright__ = "Chris Marrison"
 __author__ = 'Chris Marrison'
 __author_email__ = 'chris@infoblox.com'
 __license__ = 'BSD-2-Clause'
 
-_logger = logging.getLogger(__name__)
-
-ignore_domains = [ 'int.kn' ]
 
 def parse_args():
     """Parse command line parameters
@@ -120,48 +108,6 @@ def setup_logging(loglevel):
     return
 
 
-def internal_domain(query: str, int_domains: list = []) -> bool:
-    '''
-    '''
-    status = False
-    for id in int_domains:
-        if id in query:
-            status = True
-            break
-    
-    return status
-
-
-def process_pcap(filename: str = 'test.pcap', int_domains: list = []):
-    '''
-    '''
-    pcount = 0
-    queries = []
-    types = { 0: 'ANY', 255: 'ALL',1: 'A', 2: 'NS', 3: 'MD', 4: 'MD', 
-              5: 'CNAME', 6: 'SOA', 7:  'MB',8: 'MG',9: 'MR',10: 'NULL',
-              11: 'WKS', 12: 'PTR', 13: 'HINFO', 14: 'MINFO', 15: 'MX', 
-              16: 'TXT', 17: 'RP', 18: 'AFSDB', 28: 'AAAA', 33: 'SRV', 
-              38: 'A6', 39: 'DNAME', 65: 'HTTPS' }
-
-    dns_packets = PcapReader(filename)
-    for packet in dns_packets:
-        pcount += 1
-    dns_packets = PcapReader(filename)
-    with tqdm.tqdm(total=pcount) as pbar:
-        for packet in dns_packets:
-            pbar.update(1)
-            if packet.haslayer(DNS):
-                # print(packet.show())
-                #dst = packet['IP'].dst
-                qrystr = packet[DNSQR].qname.decode()
-                if not internal_domain(query=qrystr, int_domains=int_domains):
-                    rec_type = packet[DNSQR].qtype
-                    queries.append(f'{qrystr} {types.get(rec_type)}')
-    print(queries)
-        
-    return
-
-
 def main():
     '''
     Core script logic
@@ -173,9 +119,12 @@ def main():
 
     # Set up logging
     # log = setup_logging(args.debug)
+    
+    pcap = pcap_dns_report.PCAP_DNS(pcap_file=args.infile)
+    report = pcap.process_pcap()
+    print(report)
 
-    process_pcap(args.infile, int_domains=ignore_domains)
-    loggging.debug("Processing complete.")
+    logging.debug("Processing complete.")
 
     return exitcode
 
