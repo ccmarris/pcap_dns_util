@@ -54,6 +54,7 @@ import bloxone
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import PcapReader, Scapy_Exception
 from scapy.layers.inet import IP
+from scapy.layers.inet6 import IPv6
 from scapy.layers.dns import DNS,DNSQR,DNSRR
 
 
@@ -219,6 +220,7 @@ class PCAP_DNS:
         qcount: int = 0
         rcount: int = 0
         qname:str = ''
+        queries_by_type = {}
         all_fqdns = collections.Counter()
         query_types = collections.Counter()
         src_ips = collections.Counter()
@@ -242,10 +244,22 @@ class PCAP_DNS:
                         qcount += 1
                         # process_dns_pkt(pkt)
                         qname = str(pkt[DNSQR].qname.decode())
-                        all_fqdns[qname] += 1
-                        query_types[self.get_qtype(pkt[DNSQR].qtype)] += 1
-                        src_ips[pkt[IP].src] += 1
-                        dst_ips[pkt[IP].dst] += 1
+                        # all_fqdns[qname] += 1
+                        # Get qtype
+                        query_type = self.get_qtype(pkt[DNSQR].qtype)
+                        query_types[query_type] += 1
+                        if query_type in queries_by_type.keys():
+                            # Get qtype
+                            queries_by_type[query_type][qname] += 1
+                        else:
+                            queries_by_type[query_type] = collections.Counter()
+                            queries_by_type[query_type][qname] += 1
+                        if pkt.haslayer(IP):
+                            src_ips[pkt[IP].src] += 1
+                            dst_ips[pkt[IP].dst] += 1
+                        elif pkt.haslayer(IPv6):
+                            src_ips[pkt[IPv6].src] += 1
+                            dst_ips[pkt[IPv6].dst] += 1
                         if not self.internal_domain(fqdn=qname):
                             filtered_fqdns.add(qname)
                     if pkt[DNS].qr == 1:
@@ -255,7 +269,7 @@ class PCAP_DNS:
             report.update({ 'statistics': { 'total packets': pcount,
                                             'total queries': qcount,
                                             'total responses': rcount,
-                                            'unique_fqdns': dict(all_fqdns),
+                                            'unique_fqdns': dict(queries_by_type),
                                             'record_types': dict(query_types),
                                              'src_ips': dict(src_ips),
                                              'dst_ips': dict(dst_ips) },
