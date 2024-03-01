@@ -42,7 +42,7 @@
  POSSIBILITY OF SUCH DAMAGE.
 
 '''
-import pcap_dns_report
+import pcap_dns_util.pcap_dns_util as pcap_dns_util
 import argparse
 import logging
 import sys
@@ -131,7 +131,7 @@ def main():
     # Set up logging
     # log = setup_logging(args.debug)
     
-    pcap = pcap_dns_report.PCAP_DNS(pcap_file=args.pcap,
+    pcap = pcap_dns_util.PCAP_DNS(pcap_file=args.pcap,
                                     ignore_file=args.ignore_list)
     report = pcap.process_pcap()
 

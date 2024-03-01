@@ -65,7 +65,7 @@ from cryptography.utils import CryptographyDeprecationWarning
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 '''
 
-__version__ = '0.0.9'
+__version__ = '0.0.10'
 __copyright__ = "Chris Marrison"
 __author__ = 'Chris Marrison'
 __author_email__ = 'chris@infoblox.com'
@@ -221,7 +221,7 @@ class PCAP_DNS:
         rcount: int = 0
         qname:str = ''
         queries_by_type = {}
-        all_fqdns = collections.Counter()
+        # all_fqdns = collections.Counter()
         query_types = collections.Counter()
         src_ips = collections.Counter()
         dst_ips = collections.Counter()
@@ -269,7 +269,7 @@ class PCAP_DNS:
             report.update({ 'statistics': { 'total packets': pcount,
                                             'total queries': qcount,
                                             'total responses': rcount,
-                                            'unique_fqdns': dict(queries_by_type),
+                                            'unique_fqdns_by_qtype': dict(queries_by_type),
                                             'record_types': dict(query_types),
                                              'src_ips': dict(src_ips),
                                              'dst_ips': dict(dst_ips) },
@@ -280,6 +280,52 @@ class PCAP_DNS:
         return report
 
     
-    def print_stats(self, report):
+    def output_statistics(self, report:dict = None, 
+                          file:bool = False,
+                          prefix: str = ''):
         '''
         '''
+        stats = report.get('statistics')
+        if stats:
+            if file:
+                fname = f'{prefix}_stats.txt'
+                outfile = open(fname, 'x')
+                logging.info(f'Outputting filtered fqdns to {fname}')
+                
+            else:
+                outfile = None
+
+            for section in stats.items():
+                for data in section:
+                    if isinstance(data, dict):
+                        for i in data.items():
+                            print(i, file=outfile)
+
+                    else:
+                        print(data, file=outfile)
+
+                print('', file=outfile)
+
+        return
+
+
+    def output_filtered(self, report:dict = None,
+                        file:bool = False,
+                        prefix:str = ''):
+        '''
+        '''
+        filtered = report.get('filtered_fqdns')
+        if filtered:
+            if file:
+                fname = f'{prefix}_filtered.txt'
+                outfile = open(fname, 'x')
+                logging.info(f'Outputting filtered fqdns to {fname}')
+                
+            else:
+                outfile = None
+
+            for fqdn in filtered:
+                print(fqdn, file=outfile)
+        
+        return
+
