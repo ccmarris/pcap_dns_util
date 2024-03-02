@@ -11,7 +11,7 @@
 
  Author: Chris Marrison
 
- Date Last Updated: 20240226
+ Date Last Updated: 20240302
 
  Todo:
 
@@ -42,13 +42,13 @@
  POSSIBILITY OF SUCH DAMAGE.
 
 '''
-import pcap_dns_util.pcap_dns_util as pcap_dns_util
+import pcap_dns_util
 import argparse
 import logging
 import sys
 from rich import print
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __copyright__ = "Chris Marrison"
 __author__ = 'Chris Marrison'
 __author_email__ = 'chris@infoblox.com'
@@ -94,8 +94,8 @@ def parse_args():
     parser.add_argument('-i', '--ignore_list', type=str, default='ignore_list',
                         help="Ignore domains input file")
 
-    # parser.add_argument('-o', '--output', type=str, default='report.txt',
-    #                     help="Output file")
+    parser.add_argument('-o', '--output', type=str, default='',
+                         help="Output files using prefix (including path)")
 
     parser.add_argument('-f', '--filtered', action='store_true',
                         help="Ouput filtered domains only")
@@ -135,7 +135,12 @@ def main():
                                     ignore_file=args.ignore_list)
     report = pcap.process_pcap()
 
-    if args.filtered:
+    if args.output:
+        logging.info(f'Outputting reports using prefix {args.output}')
+        pcap.output_statistics(report, file=True, prefix=args.output)
+        pcap.output_filtered(report, file=True, prefix=args.output)
+
+    elif args.filtered:
         print(report['filtered_fqdns'])
     else:
         print(report)
