@@ -48,7 +48,7 @@ import logging
 import sys
 from rich import print
 
-__version__ = '0.0.3'
+__version__ = '0.0.5'
 __copyright__ = "Chris Marrison"
 __author__ = 'Chris Marrison'
 __author_email__ = 'chris@infoblox.com'
@@ -103,6 +103,9 @@ def parse_args():
     parser.add_argument('-S', '--silent', action='store_true',
                         help="Silent")
 
+    parser.add_argument('-r', '--raw', action='store_true',
+                        help="RAW report")
+
     return parser.parse_args()
 
 
@@ -135,18 +138,22 @@ def main():
                                     ignore_file=args.ignore_list)
     report = pcap.process_pcap()
 
-    if args.output:
-        logging.info(f'Outputting reports using prefix {args.output}')
-        pcap.output_statistics(report, file=True, prefix=args.output)
-        pcap.output_filtered(report, file=True, prefix=args.output)
-
-    elif args.filtered:
-        pcap.output_filtered(report)
+    if args.raw:
+        print(report)
     else:
-        pcap.output_statistics(report)
+        if args.output:
+            logging.info(f'Outputting reports using prefix {args.output}')
+            pcap.output_statistics(report, file=True, prefix=args.output)
+            pcap.output_filtered(report, file=True, prefix=args.output)
 
-        print('Filtered FQDNs:')
-        pcap.output_filtered(report)
+        elif args.filtered:
+            pcap.output_filtered(report)
+        else:
+            pcap.output_statistics(report)
+
+            print('Filtered FQDNs:')
+            print('')
+            pcap.output_filtered(report)
 
     logging.debug("Processing complete.")
 

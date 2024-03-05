@@ -11,7 +11,7 @@
 
  Author: Chris Marrison
 
- Date Last Updated: 20240222
+ Date Last Updated: 202403095
 
  Todo:
 
@@ -65,7 +65,7 @@ from cryptography.utils import CryptographyDeprecationWarning
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 '''
 
-__version__ = '0.0.10'
+__version__ = '0.1.0'
 __copyright__ = "Chris Marrison"
 __author__ = 'Chris Marrison'
 __author_email__ = 'chris@infoblox.com'
@@ -79,6 +79,7 @@ class PCAP_DNS:
     Report on DNS queries in PCAP file
 
     Inputs:
+        pcap_file
         dns_qtypes.yaml: Contains query type definitions
         ignore_list: Contains list of 'domains' to ignore
     '''
@@ -86,6 +87,10 @@ class PCAP_DNS:
                        ignore_file: str ='ignore_list',
                        qtypes_file: str ='dns_qtypes.yaml'):
         '''
+        Parameters:
+            pcap_file: PCAP file to use
+            ignore_file: ignore_list containing domains to filter out
+            qtypes_file: query type definitions file
         '''
         qtype_cfg: dict
         self.qtype: dict
@@ -109,6 +114,10 @@ class PCAP_DNS:
 
     def read_qtypes(self, cfg:str):
         '''
+        Read the query type definition file (yaml)
+
+        Parameters:
+            cfg: Filename
         '''
         dns_cfg: dict
 
@@ -132,6 +141,10 @@ class PCAP_DNS:
 
     def read_ignore_list(self, ignore_list:str):
         '''
+        Read the ignore_list file.
+
+        Parameters:
+            ignore_list: Filename
         '''
         domains: list = []
 
@@ -290,6 +303,13 @@ class PCAP_DNS:
                           file:bool = False,
                           prefix: str = ''):
         '''
+        Output human readable output to stdio or file
+
+        Parameters:
+            report:dict = self.process_pcap() report
+            file: bool = Output to file or not
+            prefix: str = Output path/prefix for file output
+        
         '''
         stats:dict = report.get('statistics')
 
@@ -339,6 +359,12 @@ class PCAP_DNS:
                         file:bool = False,
                         prefix:str = ''):
         '''
+        Output filtered fqdn list to stdio or file
+
+        Parameters:
+            report:dict = self.process_pcap() report
+            file: bool = Output to file or not
+            prefix: str = Output path/prefix for file output
         '''
         filtered = report.get('filtered_fqdns')
         if filtered:
