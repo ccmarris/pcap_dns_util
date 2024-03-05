@@ -141,9 +141,10 @@ def main():
         pcap.output_filtered(report, file=True, prefix=args.output)
 
     elif args.filtered:
-        print(report['filtered_fqdns'])
+        pcap.output_filtered(report)
     else:
-        print(report)
+        pcap.output_statistics(report)
+        pcap.output_filtered(report)
 
     logging.debug("Processing complete.")
 

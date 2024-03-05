@@ -233,7 +233,10 @@ class PCAP_DNS:
             logging.info('Opened PCAP, processing...')
             
             if not silent:
+                # Create progress bar
                 pbar = tqdm.tqdm(total=self.pcap_size)
+
+            # Read PCAP
             for pkt in PcapReader(self.pcap):
                 pcount += 1
                 if not silent:
@@ -265,14 +268,17 @@ class PCAP_DNS:
                     if pkt[DNS].qr == 1:
                         rcount +=1
 
-            pbar.close()
+            if not silent:
+                # Close progress bar
+                pbar.close()
+
             report.update({ 'statistics': { 'total packets': pcount,
                                             'total queries': qcount,
                                             'total responses': rcount,
-                                            'unique_fqdns_by_qtype': dict(queries_by_type),
-                                            'record_types': dict(query_types),
-                                             'src_ips': dict(src_ips),
-                                             'dst_ips': dict(dst_ips) },
+                                            'unique_fqdns_by_qtype': queries_by_type,
+                                            'record_types': query_types,
+                                             'src_ips': src_ips,
+                                             'dst_ips': dst_ips },
                            'filtered_fqdns': filtered_fqdns })
         except:
             raise
@@ -285,7 +291,8 @@ class PCAP_DNS:
                           prefix: str = ''):
         '''
         '''
-        stats = report.get('statistics')
+        stats:dict = report.get('statistics')
+
         if stats:
             if file:
                 fname = f'{prefix}_stats.txt'
@@ -295,14 +302,33 @@ class PCAP_DNS:
             else:
                 outfile = None
 
-            for section in stats.items():
-                for data in section:
-                    if isinstance(data, dict):
-                        for i in data.items():
-                            print(i, file=outfile)
+            for section in stats.keys():
+                if isinstance(stats[section], collections.Counter):
+                    print(f'{section}:', file=outfile)
+                    
+                    # Output counter
+                    for k,v in stats[section].most_common():
+                        print(f'    {k}: {v}', file=outfile)
 
-                    else:
-                        print(data, file=outfile)
+                elif isinstance(stats[section], dict):
+                    print(f'{section}:', file=outfile)
+
+                    for data in stats[section].keys():
+                        print(f'  Query Type: {data}\n', file=outfile)
+                        # Handle data 
+                        if isinstance(stats[section][data], collections.Counter):
+                            
+                            # Output counter
+                            for k,v in stats[section][data].most_common():
+                                print(f'    {k}: {v}', file=outfile)
+
+                        else:
+                            print(stats[section][data], file=outfile)
+
+                        print('', file=outfile)
+                                
+                else:
+                    print(f'{section}: {stats[section]}', file=outfile)
 
                 print('', file=outfile)
 
