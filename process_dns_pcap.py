@@ -144,6 +144,8 @@ def main():
         pcap.output_filtered(report)
     else:
         pcap.output_statistics(report)
+
+        print('Filtered FQDNs:')
         pcap.output_filtered(report)
 
     logging.debug("Processing complete.")
