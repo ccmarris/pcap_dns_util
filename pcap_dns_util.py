@@ -4,14 +4,14 @@
 
  Description:
 
-    Test pcap reader for DNS query data
+    Test pcap reader class for DNS query data
 
  Requirements:
    Python3 with scapy
 
  Author: Chris Marrison
 
- Date Last Updated: 202403095
+ Date Last Updated: 20240308
 
  Todo:
 
@@ -43,12 +43,12 @@
 
 '''
 import logging
-import sys
 import os
 import collections
 import yaml
 import tqdm
 import bloxone
+from pathlib import Path
 
 # Change scapy logging level to remove interface WARNINGS from scapy
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
@@ -119,12 +119,20 @@ class PCAP_DNS:
         Parameters:
             cfg: Filename
         '''
+        path:str =''
         dns_cfg: dict
+
+        # Locate default
+        if cfg == 'dns_qtypes.yaml':
+            # Convert to full path
+            path = Path(__name__).parent
+            cfg = f'{path}/{cfg}'
 
         if os.path.isfile(cfg):
             # Read yaml configuration file
             try:
                 dns_cfg = yaml.safe_load(open(cfg, 'r'))
+                logging.debug(f'Query types loaded from {cfg}')
             except yaml.YAMLError as err:
                 logging.error(err)
                 raise
@@ -137,6 +145,22 @@ class PCAP_DNS:
                 # dns_cfg['qtype'].update({ i: str(i) })
 
         return dns_cfg
+
+
+    def domain_in_list(self, fqdn: str, domains: list):
+        '''
+        '''
+        status: bool = False
+
+        if domains:
+            for d in domains:
+                if d in fqdn:
+                    status = True
+                    break
+        else:
+            status = False
+        
+        return status
 
 
     def read_ignore_list(self, ignore_list:str):
@@ -152,13 +176,19 @@ class PCAP_DNS:
             # Read yaml configuration file
             try:
                 f = open(ignore_list, 'r')
+                logging.info(f'Reading: {ignore_list}')
                 for domain in f:
                     d = domain.strip()
                     # Check for trailing . and append if needed
                     if d[-1] != '.':
                         d += '.'
-                    domains.append(d)
+                    if self.domain_in_list(d, domains):
+                        logging.debug(f'Ignoring domain {d}')
+                    else:
+                        domains.append(d)
+                        logging.debug(f'Adding {d} to ignore_list')
                 f.close()
+                logging.info(f'{len(domains)} domains loaded from {ignore_list}')
 
             except IOError as err:
                 logging.error(err)
@@ -253,13 +283,17 @@ class PCAP_DNS:
             for pkt in PcapReader(self.pcap):
                 pcount += 1
                 if not silent:
-                    pbar.update(len(pkt))
+                    try:
+                        l = len(pkt)
+                        pbar.update(l)
+                    except:
+                        None
                 # Check for DNS Query
                 if pkt.haslayer(DNSQR):
                     if pkt[DNS].qr == 0:
                         qcount += 1
                         # process_dns_pkt(pkt)
-                        qname = str(pkt[DNSQR].qname.decode())
+                        qname = str(pkt[DNSQR].qname.decode(errors='backslashreplace'))
                         # all_fqdns[qname] += 1
                         # Get qtype
                         query_type = self.get_qtype(pkt[DNSQR].qtype)
